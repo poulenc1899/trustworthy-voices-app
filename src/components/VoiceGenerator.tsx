@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -15,9 +15,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  LinearProgress,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { generateSpeech } from '../services/openai';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { midiController } from '../services/midiController'
 
 const VOICE_OPTIONS = [
   'alloy',
@@ -34,50 +37,70 @@ const VOICE_OPTIONS = [
 
 const PRESET_TEXTS = {
   'Train Station Announcement': 'Attention all passengers. The train to Platform 5 is now boarding. Please have your tickets ready.',
-  'Hospital Announcement': 'Dr. Smith to examination room three. Dr. Smith to examination room three.',
-  'Car Navigation Announcement': 'In two hundred feet, turn left. Then, at the next intersection, turn right.',
-};
-
-interface VoiceSettings {
-  voice: string;
-  textInputOption: string;
-  presetText: string;
-  customText: string;
-  masculineFeminine: number;
-  assertiveness: number;
-  buoyancy: number;
-  confidence: number;
-  enthusiasm: number;
-  nasality: number;
-  relaxedness: number;
-  smoothness: number;
-  tepidity: number;
-  tightness: number;
-  speed: number;
-}
+  'Hospital Announcement': 'Please can all patients proceed to the waiting room after registration at the front desk',
+  'Car Navigation Announcement': 'In two hundred meters, turn left. Then, you have reached your destination.',
+  'Thanks': 'Thanks for taking part in this voice design research! Your participation is super valuable. Hope you have a great day! '};
 
 export default function VoiceGenerator() {
   const [voice, setVoice] = useState('ballad');
   const [textInputOption, setTextInputOption] = useState('Preset Text');
   const [presetText, setPresetText] = useState('Hospital Announcement');
   const [customText, setCustomText] = useState('');
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [voiceName, setVoiceName] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [cachedAudio, setCachedAudio] = useState<string | null>(null);
 
   // Style sliders state
-  const [masculineFeminine, setMasculineFeminine] = useState(0);
-  const [assertiveness, setAssertiveness] = useState(0);
-  const [buoyancy, setBuoyancy] = useState(0);
-  const [confidence, setConfidence] = useState(0);
+  const [voicePitch, setVoicePitch] = useState(0);
   const [enthusiasm, setEnthusiasm] = useState(0);
-  const [nasality, setNasality] = useState(0);
-  const [relaxedness, setRelaxedness] = useState(0);
-  const [smoothness, setSmoothness] = useState(0);
-  const [tepidity, setTepidity] = useState(0);
   const [tightness, setTightness] = useState(0);
   const [speed, setSpeed] = useState(0);
+
+  const [activeSlider, setActiveSlider] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Initialize MIDI controller
+    midiController.initialize()
+  }, [])
+
+  useEffect(() => {
+    // Set up MIDI callbacks
+    midiController.setOnCCChange(handleMidiCCChange)
+    midiController.setOnNoteTrigger(handleGenerateSpeech)
+
+    // Clean up callbacks on unmount
+    return () => {
+      midiController.setOnCCChange(null)
+      midiController.setOnNoteTrigger(null)
+    }
+  }, []) // Empty dependency array since these callbacks don't depend on any state
+
+  const handleMidiCCChange = (slider: string, value: number) => {
+    // Map normalized value (0-1) to slider range (-2 to 2)
+    const mappedValue = (value * 4) - 2
+
+    // Set active slider for visual feedback
+    setActiveSlider(slider)
+    // Clear active slider after animation
+    setTimeout(() => setActiveSlider(null), 100)
+
+    switch (slider) {
+      case 'voicePitch':
+        setVoicePitch(mappedValue)
+        break
+      case 'enthusiasm':
+        setEnthusiasm(mappedValue)
+        break
+      case 'tightness':
+        setTightness(mappedValue)
+        break
+      case 'speed':
+        setSpeed(mappedValue)
+        break
+    }
+  }
 
   const handleVoiceChange = (event: SelectChangeEvent) => {
     setVoice(event.target.value);
@@ -94,63 +117,21 @@ export default function VoiceGenerator() {
   const createStyleInstructions = () => {
     const instructions: string[] = [];
 
-    // Masculine/Feminine
-    if (masculineFeminine === -2) instructions.push('Speak with a very masculine voice.');
-    else if (masculineFeminine === -1) instructions.push('Speak with a slightly masculine voice.');
-    else if (masculineFeminine === 1) instructions.push('Speak with a slightly feminine voice.');
-    else if (masculineFeminine === 2) instructions.push('Speak with a very feminine voice.');
-
-    // Assertiveness
-    if (assertiveness === -2) instructions.push('Sound very timid.');
-    else if (assertiveness === -1) instructions.push('Sound slightly timid.');
-    else if (assertiveness === 1) instructions.push('Sound slightly bold.');
-    else if (assertiveness === 2) instructions.push('Sound very bold.');
-
-    // Buoyancy
-    if (buoyancy === -2) instructions.push('Sound very deflated.');
-    else if (buoyancy === -1) instructions.push('Sound slightly deflated.');
-    else if (buoyancy === 1) instructions.push('Sound slightly buoyant.');
-    else if (buoyancy === 2) instructions.push('Sound very buoyant.');
-
-    // Confidence
-    if (confidence === -2) instructions.push('Sound very shy.');
-    else if (confidence === -1) instructions.push('Sound slightly shy.');
-    else if (confidence === 1) instructions.push('Sound slightly confident.');
-    else if (confidence === 2) instructions.push('Sound very confident.');
+    // Voice Pitch
+    if (voicePitch === -2) instructions.push('Speak in the lowest possible pitch.');
+    else if (voicePitch === -1) instructions.push('Speak with a medium-low pitch.');
+    else if (voicePitch === 1) instructions.push('Speak with a slightly high pitch.');
+    else if (voicePitch === 2) instructions.push('Speak with a very high pitch.');
 
     // Enthusiasm
-    if (enthusiasm === -2) instructions.push('Sound very calm.');
+    if (enthusiasm === -2) instructions.push('Sound very calm and unexcited.');
     else if (enthusiasm === -1) instructions.push('Sound slightly calm.');
-    else if (enthusiasm === 1) instructions.push('Sound slightly enthusiastic.');
-    else if (enthusiasm === 2) instructions.push('Sound very enthusiastic.');
-
-    // Nasality
-    if (nasality === -2) instructions.push('Sound very clear (not nasal).');
-    else if (nasality === -1) instructions.push('Sound slightly clear (less nasal).');
-    else if (nasality === 1) instructions.push('Sound slightly nasal.');
-    else if (nasality === 2) instructions.push('Sound very nasal.');
-
-    // Relaxedness
-    if (relaxedness === -2) instructions.push('Sound very tense.');
-    else if (relaxedness === -1) instructions.push('Sound slightly tense.');
-    else if (relaxedness === 1) instructions.push('Sound slightly relaxed.');
-    else if (relaxedness === 2) instructions.push('Sound very relaxed.');
-
-    // Smoothness
-    if (smoothness === -2) instructions.push('Speak very staccato, with clear separation between words/syllables.');
-    else if (smoothness === -1) instructions.push('Speak staccato, with slight pauses between words.');
-    else if (smoothness === 1) instructions.push('Speak legato, connecting words smoothly.');
-    else if (smoothness === 2) instructions.push('Speak very legato, smoothly connecting words.');
-
-    // Tepidity
-    if (tepidity === -2) instructions.push('Sound very tepid (unlively).');
-    else if (tepidity === -1) instructions.push('Sound slightly tepid (less lively).');
-    else if (tepidity === 1) instructions.push('Sound slightly vigorous (lively).');
-    else if (tepidity === 2) instructions.push('Sound very vigorous (lively).');
+    else if (enthusiasm === 1) instructions.push('Sound enthusiastic.');
+    else if (enthusiasm === 2) instructions.push('Sound very enthusiastic and excited.');
 
     // Tightness
-    if (tightness === -2) instructions.push('Sound very tight (not breathy).');
-    else if (tightness === -1) instructions.push('Sound slightly tight (less breathy).');
+    if (tightness === -2) instructions.push('Sound very resonant (not breathy).');
+    else if (tightness === -1) instructions.push('Sound slightly resonant (less breathy).');
     else if (tightness === 1) instructions.push('Sound slightly breathy.');
     else if (tightness === 2) instructions.push('Sound very breathy (like whispering).');
 
@@ -164,6 +145,8 @@ export default function VoiceGenerator() {
   };
 
   const handleGenerateSpeech = async () => {
+    if (!customText.trim() && !presetText.trim()) return;
+
     setIsLoading(true);
     try {
       const textToSpeak = textInputOption === 'Preset Text' 
@@ -184,10 +167,14 @@ export default function VoiceGenerator() {
       });
 
       const url = URL.createObjectURL(audioBlob);
-      setAudioUrl(url);
+      setCachedAudio(url);
+
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play();
+      }
     } catch (error) {
       console.error('Error generating speech:', error);
-      // TODO: Add error handling UI
     } finally {
       setIsLoading(false);
     }
@@ -207,20 +194,13 @@ export default function VoiceGenerator() {
       return;
     }
 
-    const voiceSettings: VoiceSettings = {
+    const voiceSettings = {
       voice,
       textInputOption,
       presetText,
       customText,
-      masculineFeminine,
-      assertiveness,
-      buoyancy,
-      confidence,
+      voicePitch,
       enthusiasm,
-      nasality,
-      relaxedness,
-      smoothness,
-      tepidity,
       tightness,
       speed,
     };
@@ -238,8 +218,25 @@ export default function VoiceGenerator() {
     handleSaveDialogClose();
   };
 
+  // Add keyboard shortcuts
+  useKeyboardShortcuts({
+    ' ': () => {
+      if (!isLoading) {
+        handleGenerateSpeech()
+      }
+    },
+    's': () => {
+      if (cachedAudio) {
+        handleSaveVoice()
+      }
+    }
+  })
+
   return (
-    <Paper elevation={3} sx={{ p: 3 }}>
+    <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
+      <Typography variant="h5" gutterBottom>
+        Voice Settings
+      </Typography>
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <FormControl fullWidth>
@@ -298,50 +295,23 @@ export default function VoiceGenerator() {
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Masculine - Feminine</Typography>
+          <Typography gutterBottom>Low Pitch - High Pitch</Typography>
           <Slider
-            value={masculineFeminine}
-            onChange={(_, value) => setMasculineFeminine(value as number)}
+            value={voicePitch}
+            onChange={(_, value) => setVoicePitch(value as number)}
             min={-2}
             max={2}
             marks
             step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Timid - Bold</Typography>
-          <Slider
-            value={assertiveness}
-            onChange={(_, value) => setAssertiveness(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Deflated - Buoyant</Typography>
-          <Slider
-            value={buoyancy}
-            onChange={(_, value) => setBuoyancy(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Shy - Confident</Typography>
-          <Slider
-            value={confidence}
-            onChange={(_, value) => setConfidence(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
+            sx={{
+              '& .MuiSlider-thumb': {
+                transition: 'all 0.1s ease',
+                ...(activeSlider === 'voicePitch' && {
+                  transform: 'scale(1.2)',
+                  boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                }),
+              },
+            }}
           />
         </Grid>
 
@@ -354,59 +324,20 @@ export default function VoiceGenerator() {
             max={2}
             marks
             step={1}
+            sx={{
+              '& .MuiSlider-thumb': {
+                transition: 'all 0.1s ease',
+                ...(activeSlider === 'enthusiasm' && {
+                  transform: 'scale(1.2)',
+                  boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                }),
+              },
+            }}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Clear - Nasal</Typography>
-          <Slider
-            value={nasality}
-            onChange={(_, value) => setNasality(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Tense - Relaxed</Typography>
-          <Slider
-            value={relaxedness}
-            onChange={(_, value) => setRelaxedness(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Staccato - Legato</Typography>
-          <Slider
-            value={smoothness}
-            onChange={(_, value) => setSmoothness(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Tepid - Vigorous</Typography>
-          <Slider
-            value={tepidity}
-            onChange={(_, value) => setTepidity(value as number)}
-            min={-2}
-            max={2}
-            marks
-            step={1}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Tight - Breathy</Typography>
+          <Typography gutterBottom>Resonant - Breathy</Typography>
           <Slider
             value={tightness}
             onChange={(_, value) => setTightness(value as number)}
@@ -414,6 +345,15 @@ export default function VoiceGenerator() {
             max={2}
             marks
             step={1}
+            sx={{
+              '& .MuiSlider-thumb': {
+                transition: 'all 0.1s ease',
+                ...(activeSlider === 'tightness' && {
+                  transform: 'scale(1.2)',
+                  boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                }),
+              },
+            }}
           />
         </Grid>
 
@@ -426,6 +366,15 @@ export default function VoiceGenerator() {
             max={2}
             marks
             step={1}
+            sx={{
+              '& .MuiSlider-thumb': {
+                transition: 'all 0.1s ease',
+                ...(activeSlider === 'speed' && {
+                  transform: 'scale(1.2)',
+                  boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                }),
+              },
+            }}
           />
         </Grid>
 
@@ -445,18 +394,23 @@ export default function VoiceGenerator() {
               color="primary"
               onClick={handleSaveVoice}
             >
-              Save Voice
+              Save
             </Button>
           </Box>
         </Grid>
 
-        {audioUrl && (
+        {isLoading && (
           <Grid item xs={12}>
-            <Box sx={{ mt: 2 }}>
-              <audio controls src={audioUrl} style={{ width: '100%' }} />
-            </Box>
+            <LinearProgress />
           </Grid>
         )}
+
+        {/* Hidden audio element for playback */}
+        <audio
+          ref={audioRef}
+          style={{ display: 'none' }}
+          autoPlay
+        />
       </Grid>
 
       <Dialog open={saveDialogOpen} onClose={handleSaveDialogClose}>
