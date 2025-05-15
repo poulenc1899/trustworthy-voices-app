@@ -2,6 +2,8 @@
 
 A web-based tool for HCI research exploring how people design trustworthy synthetic voices for different contexts. This tool allows participants to experiment with various prosodic and acoustic traits of synthetic voices and capture their design choices for analysis.
 
+![screenshot of app](readme-screenshot-2.png)
+
 ## Research Context
 
 This tool is designed for a study exploring how people design trustworthy synthetic voices in different contexts:
