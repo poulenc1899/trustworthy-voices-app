@@ -14,6 +14,8 @@ import {
   TextField,
   Grid,
   Divider,
+  Switch,
+  FormControlLabel,
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material'
 
@@ -37,6 +39,8 @@ interface SettingsModalProps {
   onMidiDeviceSelect: (deviceId: string | null) => void
   onCCMappingChange: (mappings: CCMapping) => void
   onNoteMappingChange: (mapping: NoteMapping) => void
+  onCommentsEnabledChange: (enabled: boolean) => void
+  commentsEnabled: boolean
 }
 
 const SettingsModal = ({
@@ -45,6 +49,8 @@ const SettingsModal = ({
   onMidiDeviceSelect,
   onCCMappingChange,
   onNoteMappingChange,
+  onCommentsEnabledChange,
+  commentsEnabled,
 }: SettingsModalProps) => {
   const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([])
   const [selectedDevice, setSelectedDevice] = useState<string>('')
@@ -63,13 +69,14 @@ const SettingsModal = ({
   useEffect(() => {
     const savedSettings = localStorage.getItem('midiSettings')
     if (savedSettings) {
-      const { deviceId, mappings, noteMapping: savedNoteMapping } = JSON.parse(savedSettings)
+      const { deviceId, mappings, noteMapping: savedNoteMapping, commentsEnabled: savedCommentsEnabled } = JSON.parse(savedSettings)
       setSelectedDevice(deviceId || '')
       setCCMappings(mappings)
       setNoteMapping(savedNoteMapping || { note: null, channel: 0 })
       onMidiDeviceSelect(deviceId)
       onCCMappingChange(mappings)
       onNoteMappingChange(savedNoteMapping || { note: null, channel: 0 })
+      onCommentsEnabledChange(savedCommentsEnabled || false)
     }
   }, [])
 
@@ -134,6 +141,7 @@ const SettingsModal = ({
       deviceId: selectedDevice,
       mappings: ccMappings,
       noteMapping,
+      commentsEnabled,
     }
     localStorage.setItem('midiSettings', JSON.stringify(settings))
     onClose()
@@ -150,6 +158,23 @@ const SettingsModal = ({
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" gutterBottom>
+            General Settings
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={commentsEnabled}
+                    onChange={(e) => onCommentsEnabledChange(e.target.checked)}
+                  />
+                }
+                label="Enable Comments"
+              />
+            </Grid>
+          </Grid>
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
             MIDI Settings
           </Typography>
           <Grid container spacing={3}>

@@ -4,114 +4,119 @@ import {
   Paper,
   Typography,
   Slider,
-  FormControl,
-  InputLabel,
+  TextField,
+  Grid,
+  IconButton,
+  Tooltip,
+  Button,
+  LinearProgress,
   Select,
   MenuItem,
-  TextField,
-  Button,
-  Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  LinearProgress,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
+import { Save as SaveIcon, Description as DescriptionIcon } from '@mui/icons-material';
+import { midiController } from '../services/midiController';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { SavedVoicesModal } from './SavedVoicesModal';
 import { generateSpeech } from '../services/openai';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
-import { midiController } from '../services/midiController'
-
-const VOICE_OPTIONS = [
-  'alloy',
-  'ash',
-  'ballad',
-  'coral',
-  'echo',
-  'fable',
-  'nova',
-  'onyx',
-  'sage',
-  'shimmer',
-];
 
 const PRESET_TEXTS = {
   'Train Station Announcement': 'Attention all passengers. The train to Platform 5 is now boarding. Please have your tickets ready.',
   'Hospital Announcement': 'Please can all patients proceed to the waiting room after registration at the front desk',
   'Car Navigation Announcement': 'In two hundred meters, turn left. Then, you have reached your destination.',
-  'Thanks': 'Thanks for taking part in this voice design research! Your participation is super valuable. Hope you have a great day! '};
+  'Thanks': 'Thanks for taking part in this voice design research! Your participation is super valuable. Hope you have a great day! '
+};
 
-export default function VoiceGenerator() {
-  const [voice, setVoice] = useState('ballad');
-  const [textInputOption, setTextInputOption] = useState('Preset Text');
+const AVAILABLE_VOICES = [
+  { id: 'ash', name: 'Ash' },
+  { id: 'ballad', name: 'Ballad' },
+  { id: 'coral', name: 'Coral' },
+  { id: 'sage', name: 'Sage' },
+  { id: 'verse', name: 'Verse' },
+];
+
+interface VoiceSettings {
+  participant: string;
+  voicePitch: number;
+  enthusiasm: number;
+  breathiness: number;
+  speed: number;
+  comments: {
+    voicePitch?: string;
+    enthusiasm?: string;
+    breathiness?: string;
+    speed?: string;
+  };
+  presetText: string;
+  timestamp: string;
+  openAIRequest: {
+    model: string;
+    voice: string;
+    input: string;
+    response_format: string;
+  };
+}
+
+interface VoiceGeneratorProps {
+  commentsEnabled: boolean;
+}
+
+export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
+  const [selectedVoice, setSelectedVoice] = useState('ash');
+  const [participant, setParticipant] = useState('');
   const [presetText, setPresetText] = useState('Hospital Announcement');
-  const [customText, setCustomText] = useState('');
+  const [voicePitch, setVoicePitch] = useState(0);
+  const [enthusiasm, setEnthusiasm] = useState(0);
+  const [breathiness, setBreathiness] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [comments, setComments] = useState<VoiceSettings['comments']>({});
+  const [savedVoicesOpen, setSavedVoicesOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [voiceName, setVoiceName] = useState('');
+  const [activeSlider, setActiveSlider] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [cachedAudio, setCachedAudio] = useState<string | null>(null);
 
-  // Style sliders state
-  const [voicePitch, setVoicePitch] = useState(0);
-  const [enthusiasm, setEnthusiasm] = useState(0);
-  const [tightness, setTightness] = useState(0);
-  const [speed, setSpeed] = useState(0);
-
-  const [activeSlider, setActiveSlider] = useState<string | null>(null)
-
   useEffect(() => {
     // Initialize MIDI controller
-    midiController.initialize()
-  }, [])
+    midiController.initialize();
+  }, []);
 
   useEffect(() => {
     // Set up MIDI callbacks
-    midiController.setOnCCChange(handleMidiCCChange)
-    midiController.setOnNoteTrigger(handleGenerateSpeech)
+    midiController.setOnCCChange(handleMidiCCChange);
+    midiController.setOnNoteTrigger(handleGenerateSpeech);
 
     // Clean up callbacks on unmount
     return () => {
-      midiController.setOnCCChange(null)
-      midiController.setOnNoteTrigger(null)
-    }
-  }, []) // Empty dependency array since these callbacks don't depend on any state
+      midiController.setOnCCChange(null);
+      midiController.setOnNoteTrigger(null);
+    };
+  }, []);
 
   const handleMidiCCChange = (slider: string, value: number) => {
     // Map normalized value (0-1) to slider range (-2 to 2)
-    const mappedValue = (value * 4) - 2
+    const mappedValue = (value * 4) - 2;
 
     // Set active slider for visual feedback
-    setActiveSlider(slider)
+    setActiveSlider(slider);
     // Clear active slider after animation
-    setTimeout(() => setActiveSlider(null), 100)
+    setTimeout(() => setActiveSlider(null), 100);
 
     switch (slider) {
       case 'voicePitch':
-        setVoicePitch(mappedValue)
-        break
+        setVoicePitch(mappedValue);
+        break;
       case 'enthusiasm':
-        setEnthusiasm(mappedValue)
-        break
-      case 'tightness':
-        setTightness(mappedValue)
-        break
+        setEnthusiasm(mappedValue);
+        break;
+      case 'breathiness':
+        setBreathiness(mappedValue);
+        break;
       case 'speed':
-        setSpeed(mappedValue)
-        break
+        setSpeed(mappedValue);
+        break;
     }
-  }
-
-  const handleVoiceChange = (event: SelectChangeEvent) => {
-    setVoice(event.target.value);
-  };
-
-  const handleTextInputOptionChange = (event: SelectChangeEvent) => {
-    setTextInputOption(event.target.value);
-  };
-
-  const handlePresetTextChange = (event: SelectChangeEvent) => {
-    setPresetText(event.target.value);
   };
 
   const createStyleInstructions = () => {
@@ -129,11 +134,11 @@ export default function VoiceGenerator() {
     else if (enthusiasm === 1) instructions.push('Sound enthusiastic.');
     else if (enthusiasm === 2) instructions.push('Sound very enthusiastic and excited.');
 
-    // Tightness
-    if (tightness === -2) instructions.push('Sound very resonant (not breathy).');
-    else if (tightness === -1) instructions.push('Sound slightly resonant (less breathy).');
-    else if (tightness === 1) instructions.push('Sound slightly breathy.');
-    else if (tightness === 2) instructions.push('Sound very breathy (like whispering).');
+    // Breathiness
+    if (breathiness === -2) instructions.push('Sound very resonant (not breathy).');
+    else if (breathiness === -1) instructions.push('Sound slightly resonant (less breathy).');
+    else if (breathiness === 1) instructions.push('Sound slightly breathy.');
+    else if (breathiness === 2) instructions.push('Sound very breathy (like whispering).');
 
     // Speed
     if (speed === -2) instructions.push('Speak very slowly.');
@@ -145,13 +150,11 @@ export default function VoiceGenerator() {
   };
 
   const handleGenerateSpeech = async () => {
-    if (!customText.trim() && !presetText.trim()) return;
+    if (!presetText.trim()) return;
 
     setIsLoading(true);
     try {
-      const textToSpeak = textInputOption === 'Preset Text' 
-        ? PRESET_TEXTS[presetText as keyof typeof PRESET_TEXTS]
-        : customText;
+      const textToSpeak = PRESET_TEXTS[presetText as keyof typeof PRESET_TEXTS];
 
       if (!textToSpeak) {
         throw new Error('Please enter some text to speak');
@@ -161,7 +164,7 @@ export default function VoiceGenerator() {
       
       const audioBlob = await generateSpeech({
         text: textToSpeak,
-        voice,
+        voice: selectedVoice,
         model: 'gpt-4o-mini-tts',
         instructions: styleInstructions,
       });
@@ -180,71 +183,103 @@ export default function VoiceGenerator() {
     }
   };
 
-  const handleSaveVoice = () => {
-    setSaveDialogOpen(true);
-  };
-
-  const handleSaveDialogClose = () => {
-    setSaveDialogOpen(false);
-    setVoiceName('');
-  };
-
-  const handleSaveDialogConfirm = () => {
-    if (!voiceName.trim()) {
-      return;
-    }
-
-    const voiceSettings = {
-      voice,
-      textInputOption,
-      presetText,
-      customText,
+  const handleSave = async () => {
+    const settings: VoiceSettings = {
+      participant,
       voicePitch,
       enthusiasm,
-      tightness,
+      breathiness,
       speed,
+      comments: commentsEnabled ? comments : {},
+      presetText,
+      timestamp: new Date().toISOString(),
+      openAIRequest: {
+        model: 'gpt-4o-mini-tts',
+        voice: selectedVoice,
+        input: presetText,
+        response_format: 'mp3',
+      },
     };
 
-    const blob = new Blob([JSON.stringify(voiceSettings, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${voiceName.toLowerCase().replace(/\s+/g, '-')}-voice-settings.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    handleSaveDialogClose();
+    const savedVoices = JSON.parse(localStorage.getItem('savedVoices') || '[]');
+    savedVoices.push(settings);
+    localStorage.setItem('savedVoices', JSON.stringify(savedVoices));
   };
 
-  // Add keyboard shortcuts
   useKeyboardShortcuts({
     ' ': () => {
       if (!isLoading) {
-        handleGenerateSpeech()
+        handleGenerateSpeech();
       }
     },
     's': () => {
       if (cachedAudio) {
-        handleSaveVoice()
+        handleSave();
       }
-    }
-  })
+    },
+  });
+
+  const handleCommentChange = (slider: keyof VoiceSettings['comments'], value: string) => {
+    setComments((prev: VoiceSettings['comments']) => ({
+      ...prev,
+      [slider]: value,
+    }));
+  };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
-      <Typography variant="h5" gutterBottom>
-        Voice Settings
-      </Typography>
+    <Paper elevation={3} sx={{ p: 3, maxWidth: 800, mx: 'auto', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" component="h2">
+          Voice Settings
+        </Typography>
+        <Box>
+          <Tooltip title="View Saved Voices">
+            <IconButton onClick={() => setSavedVoicesOpen(true)}>
+              <DescriptionIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
       <Grid container spacing={3}>
         <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Participant Name"
+            value={participant}
+            onChange={(e) => setParticipant(e.target.value)}
+            required
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
           <FormControl fullWidth>
             <InputLabel>Voice</InputLabel>
-            <Select value={voice} label="Voice" onChange={handleVoiceChange}>
-              {VOICE_OPTIONS.map((v) => (
-                <MenuItem key={v} value={v}>
-                  {v}
+            <Select
+              value={selectedVoice}
+              label="Voice"
+              onChange={(e) => setSelectedVoice(e.target.value)}
+            >
+              {AVAILABLE_VOICES.map((voice) => (
+                <MenuItem key={voice.id} value={voice.id}>
+                  {voice.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth>
+            <InputLabel>Preset Text</InputLabel>
+            <Select
+              value={presetText}
+              label="Preset Text"
+              onChange={(e) => setPresetText(e.target.value)}
+            >
+              {Object.keys(PRESET_TEXTS).map((text) => (
+                <MenuItem key={text} value={text}>
+                  {text}
                 </MenuItem>
               ))}
             </Select>
@@ -252,57 +287,15 @@ export default function VoiceGenerator() {
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel>Text Input Option</InputLabel>
-            <Select value={textInputOption} label="Text Input Option" onChange={handleTextInputOptionChange}>
-              <MenuItem value="Preset Text">Preset Text</MenuItem>
-              <MenuItem value="Custom Text">Custom Text</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-
-        {textInputOption === 'Preset Text' ? (
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>Preset Text</InputLabel>
-              <Select value={presetText} label="Preset Text" onChange={handlePresetTextChange}>
-                {Object.keys(PRESET_TEXTS).map((key) => (
-                  <MenuItem key={key} value={key}>
-                    {key}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        ) : (
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="Custom Text"
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-            />
-          </Grid>
-        )}
-
-        {/* Style Sliders */}
-        <Grid item xs={12}>
-          <Typography variant="h6" gutterBottom>
-            Voice Style Controls
-          </Typography>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Low Pitch - High Pitch</Typography>
+          <Typography gutterBottom>Voice Pitch</Typography>
           <Slider
             value={voicePitch}
             onChange={(_, value) => setVoicePitch(value as number)}
             min={-2}
             max={2}
-            marks
             step={1}
+            marks
+            valueLabelDisplay="auto"
             sx={{
               '& .MuiSlider-thumb': {
                 transition: 'all 0.1s ease',
@@ -313,17 +306,28 @@ export default function VoiceGenerator() {
               },
             }}
           />
+          {commentsEnabled && (
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Add a comment about this setting..."
+              value={comments.voicePitch || ''}
+              onChange={(e) => handleCommentChange('voicePitch', e.target.value)}
+              sx={{ mt: 1 }}
+            />
+          )}
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Calm - Enthusiastic</Typography>
+        <Grid item xs={12}>
+          <Typography gutterBottom>Enthusiasm</Typography>
           <Slider
             value={enthusiasm}
             onChange={(_, value) => setEnthusiasm(value as number)}
             min={-2}
             max={2}
-            marks
             step={1}
+            marks
+            valueLabelDisplay="auto"
             sx={{
               '& .MuiSlider-thumb': {
                 transition: 'all 0.1s ease',
@@ -334,38 +338,60 @@ export default function VoiceGenerator() {
               },
             }}
           />
+          {commentsEnabled && (
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Add a comment about this setting..."
+              value={comments.enthusiasm || ''}
+              onChange={(e) => handleCommentChange('enthusiasm', e.target.value)}
+              sx={{ mt: 1 }}
+            />
+          )}
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Resonant - Breathy</Typography>
+        <Grid item xs={12}>
+          <Typography gutterBottom>Breathiness</Typography>
           <Slider
-            value={tightness}
-            onChange={(_, value) => setTightness(value as number)}
+            value={breathiness}
+            onChange={(_, value) => setBreathiness(value as number)}
             min={-2}
             max={2}
-            marks
             step={1}
+            marks
+            valueLabelDisplay="auto"
             sx={{
               '& .MuiSlider-thumb': {
                 transition: 'all 0.1s ease',
-                ...(activeSlider === 'tightness' && {
+                ...(activeSlider === 'breathiness' && {
                   transform: 'scale(1.2)',
                   boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
                 }),
               },
             }}
           />
+          {commentsEnabled && (
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Add a comment about this setting..."
+              value={comments.breathiness || ''}
+              onChange={(e) => handleCommentChange('breathiness', e.target.value)}
+              sx={{ mt: 1 }}
+            />
+          )}
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Typography gutterBottom>Slow - Fast</Typography>
+        <Grid item xs={12}>
+          <Typography gutterBottom>Speed</Typography>
           <Slider
             value={speed}
             onChange={(_, value) => setSpeed(value as number)}
             min={-2}
             max={2}
-            marks
             step={1}
+            marks
+            valueLabelDisplay="auto"
             sx={{
               '& .MuiSlider-thumb': {
                 transition: 'all 0.1s ease',
@@ -376,6 +402,16 @@ export default function VoiceGenerator() {
               },
             }}
           />
+          {commentsEnabled && (
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Add a comment about this setting..."
+              value={comments.speed || ''}
+              onChange={(e) => handleCommentChange('speed', e.target.value)}
+              sx={{ mt: 1 }}
+            />
+          )}
         </Grid>
 
         <Grid item xs={12}>
@@ -389,13 +425,17 @@ export default function VoiceGenerator() {
             >
               {isLoading ? 'Generating...' : 'Generate Speech'}
             </Button>
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={handleSaveVoice}
-            >
-              Save
-            </Button>
+            <Tooltip title="Save Voice">
+              <Button
+                variant="contained"
+                color="inherit"
+                onClick={handleSave}
+                disabled={!cachedAudio}
+                sx={{ minWidth: '48px', px: 2 }}
+              >
+                <SaveIcon />
+              </Button>
+            </Tooltip>
           </Box>
         </Grid>
 
@@ -413,26 +453,10 @@ export default function VoiceGenerator() {
         />
       </Grid>
 
-      <Dialog open={saveDialogOpen} onClose={handleSaveDialogClose}>
-        <DialogTitle>Save Voice Settings</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Voice Name"
-            fullWidth
-            value={voiceName}
-            onChange={(e) => setVoiceName(e.target.value)}
-            placeholder="Enter a name for your voice"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleSaveDialogClose}>Cancel</Button>
-          <Button onClick={handleSaveDialogConfirm} disabled={!voiceName.trim()}>
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SavedVoicesModal
+        open={savedVoicesOpen}
+        onClose={() => setSavedVoicesOpen(false)}
+      />
     </Paper>
   );
-} 
+}; 

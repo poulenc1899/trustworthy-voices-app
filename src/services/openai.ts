@@ -12,47 +12,31 @@ interface GenerateSpeechParams {
   instructions?: string | null;
 }
 
-export async function generateSpeech({
+export const generateSpeech = async ({
   text,
   voice,
   model,
   instructions,
-}: GenerateSpeechParams): Promise<Blob> {
-  try {
-    if (!text) {
-      throw new Error('Text is required for speech generation');
-    }
-
-    if (!import.meta.env.VITE_OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not set. Please check your .env file.');
-    }
-
-    console.log('Generating speech with params:', {
-      model,
-      voice,
-      textLength: text.length,
-      hasInstructions: !!instructions,
-    });
-
-    const response = await openai.audio.speech.create({
+}: GenerateSpeechParams): Promise<Blob> => {
+  const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
       model,
       voice,
       input: text,
-      response_format: 'wav',
+      response_format: 'mp3',
       ...(instructions && { instructions }),
-    });
+    }),
+  });
 
-    if (!response) {
-      throw new Error('No response received from OpenAI API');
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return new Blob([arrayBuffer], { type: 'audio/wav' });
-  } catch (error) {
-    console.error('Error generating speech:', error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to generate speech: ${error.message}`);
-    }
-    throw error;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Failed to generate speech');
   }
-} 
+
+  return response.blob();
+}; 

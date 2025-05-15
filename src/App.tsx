@@ -3,7 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import Container from '@mui/material/Container'
 import Box from '@mui/material/Box'
-import VoiceGenerator from './components/VoiceGenerator'
+import { VoiceGenerator } from './components/VoiceGenerator'
 import TopBar from './components/TopBar'
 import SettingsModal from './components/SettingsModal'
 import { midiController } from './services/midiController'
@@ -23,6 +23,7 @@ const theme = createTheme({
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [commentsEnabled, setCommentsEnabled] = useState(false)
 
   const handleSettingsClick = () => {
     setSettingsOpen(true)
@@ -61,7 +62,7 @@ function App() {
           }}
         >
           <Container maxWidth="lg" sx={{ width: '100%' }}>
-            <VoiceGenerator />
+            <VoiceGenerator commentsEnabled={commentsEnabled} />
           </Container>
         </Box>
         <SettingsModal
@@ -70,6 +71,8 @@ function App() {
           onMidiDeviceSelect={handleMidiDeviceSelect}
           onCCMappingChange={handleCCMappingChange}
           onNoteMappingChange={handleNoteMappingChange}
+          onCommentsEnabledChange={setCommentsEnabled}
+          commentsEnabled={commentsEnabled}
         />
       </Box>
     </ThemeProvider>
