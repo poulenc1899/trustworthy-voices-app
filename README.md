@@ -29,9 +29,8 @@ Participants will use this tool to design their ideal trustworthy voice for each
   - Multiple synthetic voices available (Ash, Ballad, Coral, Sage, Verse)
   - Each voice can be customized with the above parameters
 
-- **MIDI Controller Support**
-  - Connect MIDI controllers for real-time parameter adjustment
-  - Visual feedback for MIDI control
+- **MIDI Controller Support and Keyboard Shortcuts**
+  - Connect MIDI controllers for parameter adjustment
   - Keyboard shortcuts for generation (spacebar) and saving (s)
 
 - **Data Collection**
@@ -84,20 +83,9 @@ The following instructions are sent to the OpenAI API based on slider values:
 
 The tool provides two export formats for research analysis:
 
-### JSON Export
-- Complete voice design data
-- All parameter values
-- Participant comments
-- Timestamps
-- Context information
+- JSON Export
+- Excel Export (CSV)
 
-### Excel Export (CSV)
-- Tabular format for easy analysis
-- Columns for all parameters
-- Participant information
-- Comments
-- Timestamps
-- Context information
 
 ## Technical Requirements
 
@@ -126,18 +114,10 @@ The tool provides two export formats for research analysis:
 7. Repeat for other contexts
 8. Export data for analysis
 
-## Research Protocol
-
-1. Brief participants on the study goals
-2. Allow time for exploration of the tool
-3. Guide participants through each context
-4. Record their voice designs
-5. Conduct post-design interview
-6. Export and analyze the collected data
 
 ## Contributing
 
-This tool is designed for academic research. For contributions or modifications, please contact the research team.
+This tool is designed for academic research. For contributions or modifications, please contact me.
 
 ## License
 
