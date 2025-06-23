@@ -32,8 +32,8 @@ const MidiSettings = ({ onMidiDeviceSelect, onCCMappingChange }: MidiSettingsPro
   const [selectedDevice, setSelectedDevice] = useState<string>('')
   const [ccMappings, setCCMappings] = useState<CCMapping>({
     voicePitch: null,
-    enthusiasm: null,
-    tightness: null,
+    pitchVariation: null,
+    breathiness: null,
     speed: null,
   })
 

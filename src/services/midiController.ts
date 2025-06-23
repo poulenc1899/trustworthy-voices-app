@@ -17,8 +17,8 @@ class MidiController {
   private selectedDevice: WebMidi.MIDIInput | null = null
   private ccMappings: CCMapping = {
     voicePitch: null,
-    enthusiasm: null,
-    tightness: null,
+    pitchVariation: null,
+    breathiness: null,
     speed: null,
   }
   private noteMapping: NoteMapping = {

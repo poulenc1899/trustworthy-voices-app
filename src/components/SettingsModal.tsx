@@ -56,8 +56,8 @@ const SettingsModal = ({
   const [selectedDevice, setSelectedDevice] = useState<string>('')
   const [ccMappings, setCCMappings] = useState<CCMapping>({
     voicePitch: null,
-    enthusiasm: null,
-    tightness: null,
+    pitchVariation: null,
+    breathiness: null,
     speed: null,
   })
   const [noteMapping, setNoteMapping] = useState<NoteMapping>({
@@ -70,11 +70,20 @@ const SettingsModal = ({
     const savedSettings = localStorage.getItem('midiSettings')
     if (savedSettings) {
       const { deviceId, mappings, noteMapping: savedNoteMapping, commentsEnabled: savedCommentsEnabled } = JSON.parse(savedSettings)
+      
+      // Transform old parameter names to new ones
+      const transformedMappings = {
+        voicePitch: mappings.voicePitch ?? null,
+        pitchVariation: mappings.enthusiasm ?? mappings.pitchVariation ?? null,
+        breathiness: mappings.tightness ?? mappings.breathiness ?? null,
+        speed: mappings.speed ?? null,
+      }
+      
       setSelectedDevice(deviceId || '')
-      setCCMappings(mappings)
+      setCCMappings(transformedMappings)
       setNoteMapping(savedNoteMapping || { note: null, channel: 0 })
       onMidiDeviceSelect(deviceId)
-      onCCMappingChange(mappings)
+      onCCMappingChange(transformedMappings)
       onNoteMappingChange(savedNoteMapping || { note: null, channel: 0 })
       onCommentsEnabledChange(savedCommentsEnabled || false)
     }

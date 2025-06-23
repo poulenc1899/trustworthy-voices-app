@@ -25,7 +25,9 @@ const PRESET_TEXTS = {
   'Train Station Announcement': 'Attention all passengers. The train to Platform 5 is now boarding. Please have your tickets ready.',
   'Hospital Announcement': 'Please can all patients proceed to the waiting room after registration at the front desk',
   'Car Navigation Announcement': 'In two hundred meters, turn left. Then, you have reached your destination.',
-  'Thanks': 'Thanks for taking part in this voice design research! Your participation is super valuable. Hope you have a great day! '
+  'Lab Results Call': 'Hello, this is Dr. Smith calling with your lab results. Your tests came back normal. Please schedule a follow-up appointment at your convenience.',
+  'Thanks': 'Thanks for taking part in this voice design research! Your participation is super valuable. Hope you have a great day! ',
+  'Call for Participation': 'Please can you help with this exciting and fun research project about synthetic voices?'
 };
 
 const AVAILABLE_VOICES = [
@@ -39,12 +41,12 @@ const AVAILABLE_VOICES = [
 interface VoiceSettings {
   participant: string;
   voicePitch: number;
-  enthusiasm: number;
+  pitchVariation: number;
   breathiness: number;
   speed: number;
   comments: {
     voicePitch?: string;
-    enthusiasm?: string;
+    pitchVariation?: string;
     breathiness?: string;
     speed?: string;
   };
@@ -67,7 +69,7 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
   const [participant, setParticipant] = useState('');
   const [presetText, setPresetText] = useState('Hospital Announcement');
   const [voicePitch, setVoicePitch] = useState(0);
-  const [enthusiasm, setEnthusiasm] = useState(0);
+  const [pitchVariation, setPitchVariation] = useState(0);
   const [breathiness, setBreathiness] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [comments, setComments] = useState<VoiceSettings['comments']>({});
@@ -92,7 +94,7 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
       midiController.setOnCCChange(null);
       midiController.setOnNoteTrigger(null);
     };
-  }, []);
+  }, [selectedVoice, presetText, voicePitch, pitchVariation, breathiness, speed]);
 
   const handleMidiCCChange = (slider: string, value: number) => {
     // Map normalized value (0-1) to slider range (-2 to 2)
@@ -107,8 +109,8 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
       case 'voicePitch':
         setVoicePitch(mappedValue);
         break;
-      case 'enthusiasm':
-        setEnthusiasm(mappedValue);
+      case 'pitchVariation':
+        setPitchVariation(mappedValue);
         break;
       case 'breathiness':
         setBreathiness(mappedValue);
@@ -128,12 +130,11 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
     else if (voicePitch === 1) instructions.push('Speak with a slightly high pitch.');
     else if (voicePitch === 2) instructions.push('Speak with a very high pitch.');
 
-    // Enthusiasm
-    if (enthusiasm === -2) instructions.push('Sound very calm and unexcited.');
-    else if (enthusiasm === -1) instructions.push('Sound slightly calm.');
-    else if (enthusiasm === 1) instructions.push('Sound enthusiastic.');
-    else if (enthusiasm === 2) instructions.push('Sound very enthusiastic and excited.');
-
+    // Pitch Variation
+    if (pitchVariation === -2) instructions.push('speak in a monotone.');
+    else if (pitchVariation === -1) instructions.push('speak only with slight variation in pitch.');
+    else if (pitchVariation === 1) instructions.push('speak with a slightly elevated variation in pitch.');
+    else if (pitchVariation === 2) instructions.push('speak with a extremely elevated variation in pitch');
     // Breathiness
     if (breathiness === -2) instructions.push('Sound very resonant (not breathy).');
     else if (breathiness === -1) instructions.push('Sound slightly resonant (less breathy).');
@@ -187,7 +188,7 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
     const settings: VoiceSettings = {
       participant,
       voicePitch,
-      enthusiasm,
+      pitchVariation,
       breathiness,
       speed,
       comments: commentsEnabled ? comments : {},
@@ -224,6 +225,14 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
       ...prev,
       [slider]: value,
     }));
+  };
+
+  const handleReset = () => {
+    setVoicePitch(0);
+    setPitchVariation(0);
+    setBreathiness(0);
+    setSpeed(0);
+    setComments({});
   };
 
   return (
@@ -319,10 +328,10 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
         </Grid>
 
         <Grid item xs={12}>
-          <Typography gutterBottom>Enthusiasm</Typography>
+          <Typography gutterBottom>Pitch Variation</Typography>
           <Slider
-            value={enthusiasm}
-            onChange={(_, value) => setEnthusiasm(value as number)}
+            value={pitchVariation}
+            onChange={(_, value) => setPitchVariation(value as number)}
             min={-2}
             max={2}
             step={1}
@@ -331,7 +340,7 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
             sx={{
               '& .MuiSlider-thumb': {
                 transition: 'all 0.1s ease',
-                ...(activeSlider === 'enthusiasm' && {
+                ...(activeSlider === 'pitchVariation' && {
                   transform: 'scale(1.2)',
                   boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
                 }),
@@ -343,8 +352,8 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
               fullWidth
               size="small"
               placeholder="Add a comment about this setting..."
-              value={comments.enthusiasm || ''}
-              onChange={(e) => handleCommentChange('enthusiasm', e.target.value)}
+              value={comments.pitchVariation || ''}
+              onChange={(e) => handleCommentChange('pitchVariation', e.target.value)}
               sx={{ mt: 1 }}
             />
           )}
@@ -434,6 +443,16 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
                 sx={{ minWidth: '48px', px: 2 }}
               >
                 <SaveIcon />
+              </Button>
+            </Tooltip>
+            <Tooltip title="Reset Sliders">
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleReset}
+                sx={{ minWidth: '48px', px: 2 }}
+              >
+                Reset
               </Button>
             </Tooltip>
           </Box>
