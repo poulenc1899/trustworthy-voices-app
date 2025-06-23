@@ -5,9 +5,9 @@ import { generateSpeech } from '../services/openai';
 import Picker from 'react-mobile-picker';
 
 const CONTEXTS = [
-  { key: 'train', label: 'Train Station', video: 'https://www.dropbox.com/scl/fi/gls8l2jss7t7ipwcqwv4j/train.webm?rlkey=t92csxcj5fnpslznrv1vl7n4x&raw=1' },
-  { key: 'hospital', label: 'Hospital', video: 'https://www.dropbox.com/scl/fi/in7tdufdt2nnw6hsz8mkf/hospital.webm?rlkey=lsq30y9afkgxcj0hcmw9c5e2u&raw=1' },
-  { key: 'car', label: 'Car', video: 'https://www.dropbox.com/scl/fi/38qqec99hbmo5xflq3rb2/car.webm?rlkey=2oo8e2uxms69hq09fbbvugebc&raw=1' },
+  { key: 'train', label: 'Train Station', video: 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_train.mp4' },
+  { key: 'hospital', label: 'Hospital', video: 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_hospital.mp4' },
+  { key: 'car', label: 'Car', video: 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_car.mp4' },
 ];
 
 const PITCH_OPTIONS = [
@@ -74,9 +74,9 @@ const ExhibitionPage: React.FC = () => {
   const getVideoSrc = () => {
     const found = CONTEXTS.find(c => c.key === context);
     if (found && found.key === 'car') {
-      return CONTEXTS[2].video;
+      return 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_car.mp4';
     }
-    return found ? found.video : CONTEXTS[0].video;
+    return found ? found.video : 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_train.mp4';
   };
 
   const handleGenerate = async () => {
@@ -97,7 +97,7 @@ const ExhibitionPage: React.FC = () => {
           : 'In two hundred meters, turn left. Then, you have reached your destination.';
       const audioBlob = await generateSpeech({
         text,
-        voice: 'ash',
+        voice: 'ballad',
         model: 'gpt-4o-mini-tts',
         instructions,
       });
@@ -118,12 +118,8 @@ const ExhibitionPage: React.FC = () => {
     }
   };
 
-  // Seek video to 40s on load
-  const handleVideoLoadedMetadata = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 40;
-    }
-  };
+  // No need to seek video to 40s anymore
+  const handleVideoLoadedMetadata = () => {};
 
   return (
     <Box sx={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -146,7 +142,7 @@ const ExhibitionPage: React.FC = () => {
         src={getVideoSrc()}
         onLoadedMetadata={handleVideoLoadedMetadata}
         onError={e => {
-          if (context === 'car') (e.target as HTMLVideoElement).src = CONTEXTS[0].video;
+          if (context === 'car') (e.target as HTMLVideoElement).src = 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_train.mp4';
         }}
       />
       {/* Overlay */}
