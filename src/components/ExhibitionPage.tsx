@@ -4,11 +4,10 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import { generateSpeech } from '../services/openai';
 import Picker from 'react-mobile-picker';
 
-const BASE_URL = import.meta.env.BASE_URL || '/';
 const CONTEXTS = [
-  { key: 'train', label: 'Train Station', video: `${BASE_URL}train.webm` },
-  { key: 'hospital', label: 'Hospital', video: `${BASE_URL}hospital.webm` },
-  { key: 'car', label: 'Car', video: `${BASE_URL}car.webm` },
+  { key: 'train', label: 'Train Station', video: 'https://www.dropbox.com/scl/fi/gls8l2jss7t7ipwcqwv4j/train.webm?rlkey=t92csxcj5fnpslznrv1vl7n4x&raw=1' },
+  { key: 'hospital', label: 'Hospital', video: 'https://www.dropbox.com/scl/fi/in7tdufdt2nnw6hsz8mkf/hospital.webm?rlkey=lsq30y9afkgxcj0hcmw9c5e2u&raw=1' },
+  { key: 'car', label: 'Car', video: 'https://www.dropbox.com/scl/fi/38qqec99hbmo5xflq3rb2/car.webm?rlkey=2oo8e2uxms69hq09fbbvugebc&raw=1' },
 ];
 
 const PITCH_OPTIONS = [
@@ -75,9 +74,9 @@ const ExhibitionPage: React.FC = () => {
   const getVideoSrc = () => {
     const found = CONTEXTS.find(c => c.key === context);
     if (found && found.key === 'car') {
-      return `${BASE_URL}car.webm`;
+      return CONTEXTS[2].video;
     }
-    return found ? found.video : `${BASE_URL}train.webm`;
+    return found ? found.video : CONTEXTS[0].video;
   };
 
   const handleGenerate = async () => {
@@ -147,7 +146,7 @@ const ExhibitionPage: React.FC = () => {
         src={getVideoSrc()}
         onLoadedMetadata={handleVideoLoadedMetadata}
         onError={e => {
-          if (context === 'car') (e.target as HTMLVideoElement).src = `${BASE_URL}train.webm`;
+          if (context === 'car') (e.target as HTMLVideoElement).src = CONTEXTS[0].video;
         }}
       />
       {/* Overlay */}
