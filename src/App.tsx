@@ -7,7 +7,10 @@ import { VoiceGenerator } from './components/VoiceGenerator'
 import TopBar from './components/TopBar'
 import SettingsModal from './components/SettingsModal'
 import { midiController } from './services/midiController'
+import ExhibitionPage from './components/ExhibitionPage'
 import './App.css'
+import IconButton from '@mui/material/IconButton'
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 
 const theme = createTheme({
   palette: {
@@ -24,6 +27,7 @@ const theme = createTheme({
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [commentsEnabled, setCommentsEnabled] = useState(false)
+  const [showExhibition, setShowExhibition] = useState(false)
 
   const handleSettingsClick = () => {
     setSettingsOpen(true)
@@ -49,7 +53,18 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <TopBar onSettingsClick={handleSettingsClick} />
+        <TopBar onSettingsClick={handleSettingsClick}>
+          <Box sx={{ position: 'absolute', top: 12, left: 24, zIndex: 10 }}>
+            <IconButton
+              onClick={() => setShowExhibition((prev) => !prev)}
+              color="primary"
+              size="large"
+              sx={{ background: 'rgba(255,255,255,0.7)', '&:hover': { background: 'rgba(255,255,255,0.9)' } }}
+            >
+              <SwapHorizIcon />
+            </IconButton>
+          </Box>
+        </TopBar>
         <Box
           sx={{
             flex: 1,
@@ -62,7 +77,11 @@ function App() {
           }}
         >
           <Container maxWidth="lg" sx={{ width: '100%' }}>
-            <VoiceGenerator commentsEnabled={commentsEnabled} />
+            {showExhibition ? (
+              <ExhibitionPage />
+            ) : (
+              <VoiceGenerator commentsEnabled={commentsEnabled} />
+            )}
           </Container>
         </Box>
         <SettingsModal

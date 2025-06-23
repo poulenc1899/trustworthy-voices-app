@@ -4,12 +4,13 @@ import hexagonLogo from '/hexagon-logo.svg'
 
 interface TopBarProps {
   onSettingsClick: () => void
+  children?: React.ReactNode
 }
 
-const TopBar = ({ onSettingsClick }: TopBarProps) => {
+const TopBar = ({ onSettingsClick, children }: TopBarProps) => {
   return (
     <AppBar position="static" color="default" elevation={1}>
-      <Toolbar sx={{ justifyContent: 'space-between' }}>
+      <Toolbar sx={{ justifyContent: 'space-between', position: 'relative' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box 
             component="img"
@@ -44,6 +45,7 @@ const TopBar = ({ onSettingsClick }: TopBarProps) => {
         >
           <SettingsIcon />
         </IconButton>
+        {children}
       </Toolbar>
     </AppBar>
   )

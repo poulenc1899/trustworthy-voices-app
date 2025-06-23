@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Note: In production, you should use a backend proxy
-});
+// import OpenAI from 'openai';
 
 interface GenerateSpeechParams {
   text: string;
