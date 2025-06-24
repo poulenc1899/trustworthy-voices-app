@@ -435,25 +435,29 @@ export const VoiceGenerator = ({ commentsEnabled }: VoiceGeneratorProps) => {
               {isLoading ? 'Generating...' : 'Generate Speech'}
             </Button>
             <Tooltip title="Save Voice">
-              <Button
-                variant="contained"
-                color="inherit"
-                onClick={handleSave}
-                disabled={!cachedAudio}
-                sx={{ minWidth: '48px', px: 2 }}
-              >
-                <SaveIcon />
-              </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  onClick={handleSave}
+                  disabled={!cachedAudio}
+                  sx={{ minWidth: '48px', px: 2 }}
+                >
+                  <SaveIcon />
+                </Button>
+              </span>
             </Tooltip>
             <Tooltip title="Reset Sliders">
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={handleReset}
-                sx={{ minWidth: '48px', px: 2 }}
-              >
-                Reset
-              </Button>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleReset}
+                  sx={{ minWidth: '48px', px: 2 }}
+                >
+                  Reset
+                </Button>
+              </span>
             </Tooltip>
           </Box>
         </Grid>

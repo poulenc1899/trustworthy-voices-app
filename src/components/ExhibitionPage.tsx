@@ -1,8 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Box, Button, IconButton } from '@mui/material';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import { Box, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { generateSpeech } from '../services/openai';
-import Picker from 'react-mobile-picker';
 
 const CONTEXTS = [
   { key: 'train', label: 'Train Station', video: 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_train.mp4' },
@@ -35,41 +33,15 @@ const SPEED_OPTIONS = [
   'and speak very quickly.',
 ];
 
-const PICKER_OPTIONS: { [key: string]: string[] } = {
-  pitch: PITCH_OPTIONS,
-  variation: VARIATION_OPTIONS,
-  breathiness: BREATHINESS_OPTIONS,
-  speed: SPEED_OPTIONS,
-};
-const DEFAULTS = {
-  pitch: PITCH_OPTIONS[0],
-  variation: VARIATION_OPTIONS[0],
-  breathiness: BREATHINESS_OPTIONS[0],
-  speed: SPEED_OPTIONS[0],
-};
-
-// Helper for picker item style
-const pickerItemStyle = (selected: boolean) => ({
-  fontWeight: selected ? 700 : 400,
-  color: '#222',
-  textShadow: selected ? '0 1px 8px #fff, 0 0px 2px #fff' : 'none',
-  fontSize: selected ? '1.1rem' : '1rem',
-  textAlign: 'center' as const,
-  padding: '0 8px',
-  transition: 'font-weight 0.2s, color 0.2s',
-});
-
 const ExhibitionPage: React.FC = () => {
   const [context, setContext] = useState('train');
-  const [picker, setPicker] = useState(DEFAULTS);
+  const [pitch, setPitch] = useState(PITCH_OPTIONS[0]);
+  const [variation, setVariation] = useState(VARIATION_OPTIONS[0]);
+  const [breathiness, setBreathiness] = useState(BREATHINESS_OPTIONS[0]);
+  const [speed, setSpeed] = useState(SPEED_OPTIONS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // react-mobile-picker expects value as { [key]: string }
-  const handlePickerChange = (nextValue: typeof picker) => {
-    setPicker(nextValue);
-  };
 
   const getVideoSrc = () => {
     const found = CONTEXTS.find(c => c.key === context);
@@ -82,12 +54,7 @@ const ExhibitionPage: React.FC = () => {
   const handleGenerate = async () => {
     setIsLoading(true);
     setAudioUrl(null);
-    const instructions = [
-      picker.pitch,
-      picker.variation,
-      picker.breathiness,
-      picker.speed,
-    ].join(' ');
+    const instructions = [pitch, variation, breathiness, speed].join(' ');
     try {
       const text =
         context === 'train'
@@ -110,20 +77,8 @@ const ExhibitionPage: React.FC = () => {
     }
   };
 
-  // Fullscreen the whole page
-  const handleFullscreen = () => {
-    const docElm = document.documentElement;
-    if (docElm.requestFullscreen) {
-      docElm.requestFullscreen();
-    }
-  };
-
-  // No need to seek video to 40s anymore
-  const handleVideoLoadedMetadata = () => {};
-
   return (
     <Box sx={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      {/* Video Background */}
       <video
         ref={videoRef}
         autoPlay
@@ -140,12 +95,7 @@ const ExhibitionPage: React.FC = () => {
           zIndex: 0,
         }}
         src={getVideoSrc()}
-        onLoadedMetadata={handleVideoLoadedMetadata}
-        onError={e => {
-          if (context === 'car') (e.target as HTMLVideoElement).src = 'https://trustworthy-voices-videos.s3.amazonaws.com/trimmed_train.mp4';
-        }}
       />
-      {/* Overlay */}
       <Box
         sx={{
           position: 'absolute',
@@ -161,74 +111,86 @@ const ExhibitionPage: React.FC = () => {
           background: 'rgba(0,0,0,0.35)',
         }}
       >
-        {/* Context Selector */}
         <Box sx={{ display: 'flex', mb: 4, gap: 2 }}>
           {CONTEXTS.map(c => (
             <Button
               key={c.key}
               variant={context === c.key ? 'contained' : 'outlined'}
               color="primary"
-              sx={{ fontSize: '1.2rem', px: 4, py: 1, borderRadius: 6, fontWeight: 600 }}
+              sx={{
+                fontSize: '1.2rem',
+                px: 4,
+                py: 1,
+                borderRadius: 6,
+                fontWeight: 600,
+                ...(context !== c.key && {
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  borderColor: 'transparent',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                    borderColor: 'transparent',
+                  }
+                })
+              }}
               onClick={() => setContext(c.key)}
             >
               {c.label}
             </Button>
           ))}
         </Box>
-        {/* Picker Row with 'Speak in' label inline */}
+        <Box sx={{ mb: 3, fontSize: '1.1rem', color: '#fff', textShadow: '0 1px 8px #000, 0 0px 2px #000', fontWeight: 400 }}>
+          Select the prompt that will be used to generate the voice.
+        </Box>
         <Box
           sx={{
             display: 'flex',
             flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center',
-            flexWrap: 'nowrap',
-            gap: { xs: 1, md: 3 },
-            mb: 2,
+            gap: 2,
+            mb: 4,
             width: { xs: '98vw', md: '80vw' },
             maxWidth: 1200,
-            minHeight: 120,
             background: 'rgba(255,255,255,0.85)',
             borderRadius: 4,
             boxShadow: 3,
-            py: 2,
-            px: { xs: 1, md: 4 },
-            overflowX: 'auto',
+            p: 3,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', pr: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <span style={{ fontSize: '1rem', fontWeight: 600, color: '#222', textShadow: '0 1px 8px #fff, 0 0px 2px #fff', whiteSpace: 'nowrap' }}>
-              Speak in...
-            </span>
-          </Box>
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
-            <Picker
-              value={picker}
-              onChange={handlePickerChange}
-              height={160}
-              itemHeight={40}
-              style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-              className="exhibition-picker"
-            >
-              {Object.keys(PICKER_OPTIONS).map((name) => (
-                <Picker.Column key={name} name={name}>
-                  {PICKER_OPTIONS[name].map((option: string) => (
-                    <Picker.Item key={option} value={option}>
-                      {({ selected }: { selected: boolean }) => (
-                        <span style={pickerItemStyle(selected)}>{option}</span>
-                      )}
-                    </Picker.Item>
-                  ))}
-                </Picker.Column>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Pitch</InputLabel>
+            <Select value={pitch} onChange={(e) => setPitch(e.target.value)} label="Pitch">
+              {PITCH_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
               ))}
-            </Picker>
-          </Box>
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Variation</InputLabel>
+            <Select value={variation} onChange={(e) => setVariation(e.target.value)} label="Variation">
+              {VARIATION_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Breathiness</InputLabel>
+            <Select value={breathiness} onChange={(e) => setBreathiness(e.target.value)} label="Breathiness">
+              {BREATHINESS_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Speed</InputLabel>
+            <Select value={speed} onChange={(e) => setSpeed(e.target.value)} label="Speed">
+              {SPEED_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
-        {/* Instruction below picker */}
-        <Box sx={{ mb: 3, fontSize: '1.1rem', color: '#fff', textShadow: '0 1px 8px #000, 0 0px 2px #000', fontWeight: 400 }}>
-          Select the prompt that will be used to generate the voice.
-        </Box>
-        {/* Generate Button */}
         <Button
           variant="contained"
           color="secondary"
@@ -248,25 +210,9 @@ const ExhibitionPage: React.FC = () => {
         >
           {isLoading ? 'Generating...' : 'Does this voice sound trustworthy?'}
         </Button>
-        {/* Audio Playback */}
         {audioUrl && (
-          <audio src={audioUrl} controls autoPlay style={{ marginTop: 16, width: 320 }} />
+          <audio controls src={audioUrl} style={{ marginTop: '1rem' }} />
         )}
-        {/* Fullscreen Button */}
-        <IconButton
-          onClick={handleFullscreen}
-          sx={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            zIndex: 2,
-            background: 'rgba(255,255,255,0.7)',
-            '&:hover': { background: 'rgba(255,255,255,0.9)' },
-          }}
-          size="large"
-        >
-          <FullscreenIcon fontSize="inherit" />
-        </IconButton>
       </Box>
     </Box>
   );
